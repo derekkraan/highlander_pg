@@ -1,6 +1,6 @@
-defmodule HighlanderPgTest do
+defmodule HighlanderPGTest do
   use ExUnit.Case
-  doctest HighlanderPg
+  doctest HighlanderPG
 
   @connect_opts [
     username: "postgres",
@@ -10,8 +10,12 @@ defmodule HighlanderPgTest do
 
   test "can start a child" do
     children = [
-      {HighlanderPg,
-       [child_spec: {MyTestServer, :hello}, name: :my_test_server, connect_opts: @connect_opts]}
+      {HighlanderPG,
+       [
+         child_spec: {TestServer, [:hello, self()]},
+         name: :my_test_server,
+         connect_opts: @connect_opts
+       ]}
     ]
 
     opts = [strategy: :one_for_one, name: MySupervisor]
@@ -21,44 +25,43 @@ defmodule HighlanderPgTest do
   # bad connection opts = error on start
 
   test "connects to postgres" do
-    child_spec = {MyTestServer, [:hello, self()]}
+    sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
+    sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
+    # child_spec = {TestServer, [:hello, self()]}
 
-    children = [
-      {HighlanderPg,
-       [child_spec: child_spec, name: :my_highlander_pg, connect_opts: @connect_opts]},
-      Supervisor.child_spec(
-        {HighlanderPg,
-         [
-           child_spec: child_spec,
-           name: :my_highlander_pg2,
-           connect_opts: @connect_opts
-         ]},
-        id: :highlander_2
-      )
-    ]
+    # children = [
+    #   {HighlanderPG,
+    #    [child_spec: child_spec, name: :my_highlander_pg, connect_opts: @connect_opts]},
+    #   Supervisor.child_spec(
+    #     {HighlanderPG,
+    #      [
+    #        child_spec: child_spec,
+    #        name: :my_highlander_pg2,
+    #        connect_opts: @connect_opts
+    #      ]},
+    #     id: :highlander_2
+    #   )
+    # ]
 
-    opts = [strategy: :one_for_one, name: MySupervisor2]
-    {:ok, _s_pid} = Supervisor.start_link(children, opts)
+    # opts = [strategy: :one_for_one, name: MySupervisor2]
+    # {:ok, _s_pid} = Supervisor.start_link(children, opts)
 
     assert_receive(:hello)
     refute_receive(:hello, 500)
   end
 
-  test "starts a second process when the first dies" do
-    child_spec = {MyTestServer, [:hello, self()]}
-
+  def sup(name, child_spec) do
     children = [
-      {HighlanderPg,
-       [child_spec: child_spec, name: :my_highlander_pg, connect_opts: @connect_opts]}
+      {HighlanderPG, [child_spec: child_spec, name: name, connect_opts: @connect_opts]}
     ]
 
-    opts = [strategy: :one_for_one, name: MySupervisor3]
-    {:ok, spid1} = Supervisor.start_link(children, opts)
+    opts = [strategy: :one_for_one]
+    {:ok, _spid} = Supervisor.start_link(children, opts)
+  end
 
-    opts = [strategy: :one_for_one, name: MySupervisor4]
-
-    {:ok, _spid2} =
-      Supervisor.start_link(children, opts)
+  test "starts a second process when the first dies" do
+    {:ok, spid1} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
+    {:ok, _spid2} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
 
     assert_receive(:hello)
     refute_receive(:hello, 500)
@@ -66,5 +69,10 @@ defmodule HighlanderPgTest do
     Supervisor.stop(spid1)
 
     assert_receive(:hello)
+  end
+
+  test "shuts down gracefully" do
+    # child_spec = {TestServer2, [:hello, :goodbye, self()]}
+    # children = 
   end
 end
