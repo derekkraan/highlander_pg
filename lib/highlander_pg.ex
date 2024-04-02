@@ -94,33 +94,28 @@ defmodule HighlanderPG do
       end
   end
 
-  defstruct [:connect_opts, :pg_pid, :child_spec, :child_pid, :name]
+  defstruct [:connect_opts, :pg_child, :child, :name]
 
   @impl true
   def init(init_opts) do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
 
-    child_spec = HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
+    child = HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
 
     name = Keyword.get(init_opts, :name, __MODULE__)
-    # TODO implement default shutdown 5000ms
-    # TODO implement shutdown 'brutal kill' & timeout
 
-    state = %__MODULE__{connect_opts: connect_opts, child_spec: child_spec, name: name}
+    state = %__MODULE__{connect_opts: connect_opts, child: child, name: name}
 
     {:ok, state, {:continue, :init}}
   end
 
   @impl true
   def handle_continue(:init, state) do
-    # TODO How to track pg_pid in a child_spec, like how supervisor expects it
-    {:ok, pg_pid} = connect(state)
-
-    state = %{state | pg_pid: pg_pid}
+    state = connect(state)
 
     if get_lock(state) do
-      {:noreply, start_child(state)}
+      {:noreply, Map.put(state, :child, start_child(state.child))}
     else
       # TODO try again very soon
       {:noreply, state}
@@ -133,13 +128,18 @@ defmodule HighlanderPG do
   end
 
   defp connect(state) do
-    Postgrex.start_link(state.connect_opts)
+    postgrex_child =
+      {Postgrex, state.connect_opts}
+      |> HighlanderPG.Supervisor.handle_child_spec()
+      |> start_child()
+
+    Map.put(state, :pg_child, postgrex_child)
   end
 
   defp get_lock(state) do
     # TODO make the keyspace configurable
     # TODO make the hash function configurable
-    case Postgrex.query(state.pg_pid, "select pg_advisory_lock($1, $2)", [
+    case Postgrex.query(state.pg_child.pid, "select pg_advisory_lock($1, $2)", [
            1,
            :erlang.phash2(state.name)
          ]) do
@@ -151,23 +151,46 @@ defmodule HighlanderPG do
     end
   end
 
-  defp start_child(state) do
-    {m, f, a} = state.child_spec.start
+  defp start_child(child) do
+    {m, f, a} = child.start
 
     case apply(m, f, a) do
       {:ok, pid} when is_pid(pid) ->
-        child_spec = Map.put(state.child_spec, :pid, pid)
-        %{state | child_spec: child_spec}
+        Map.put(child, :pid, pid)
+    end
+  end
+
+  # defp start_child(state) do
+  #   {m, f, a} = state.child_spec.start
+
+  #   case apply(m, f, a) do
+  #     {:ok, pid} when is_pid(pid) ->
+  #       child_spec = Map.put(state.child_spec, :pid, pid)
+  #       %{state | child_spec: child_spec}
+  #   end
+  # end
+
+  require Logger
+
+  defmacrop time_it(label, do: block) do
+    quote do
+      IO.inspect("#{unquote(label)} starting")
+      t1 = :erlang.monotonic_time() |> :erlang.convert_time_unit(:native, :millisecond)
+      res = unquote(block)
+      t2 = :erlang.monotonic_time() |> :erlang.convert_time_unit(:native, :millisecond)
+      IO.inspect("#{unquote(label)} took #{t2 - t1}ms")
+      res
     end
   end
 
   @impl true
   def terminate(:shutdown, state) do
-    HighlanderPG.Supervisor.shutdown(state.child_spec)
+    HighlanderPG.Supervisor.shutdown(state.child)
+
+    HighlanderPG.Supervisor.shutdown(state.pg_child)
   end
 
-  def terminate(reason, state) do
-    IO.inspect({reason, state})
-    {:ok, "stop"}
-  end
+  # def terminate(reason, _state) do
+  #   IO.inspect(reason, label: "OTHER TERMINATE")
+  # end
 end

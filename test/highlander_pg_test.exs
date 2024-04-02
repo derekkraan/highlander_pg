@@ -61,12 +61,15 @@ defmodule HighlanderPGTest do
 
   test "starts a second process when the first dies" do
     {:ok, spid1} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
-    {:ok, _spid2} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
 
     assert_receive(:hello)
+
+    {:ok, _spid2} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
+
     refute_receive(:hello, 500)
 
     Supervisor.stop(spid1)
+    assert_receive(:goodbye, 500)
 
     assert_receive(:hello)
   end

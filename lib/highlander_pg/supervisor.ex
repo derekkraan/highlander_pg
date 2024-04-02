@@ -35,29 +35,29 @@ defmodule HighlanderPG.Supervisor do
     Map.put(child_spec, :shutdown, shutdown)
   end
 
-  def shutdown(%{pid: pid, shutdown: :brutal_kill} = child_spec) do
-    monitor = Process.monitor(child_spec.pid)
+  def shutdown(%{pid: pid, shutdown: :brutal_kill}) do
+    monitor = Process.monitor(pid)
     Process.exit(pid, :kill)
 
     receive do
-      {:DOWN, ^monitor, ^pid, _reason} ->
+      {:DOWN, ^monitor, :process, ^pid, _reason} ->
         :ok
     end
   end
 
-  def shutdown(%{pid: pid, shutdown: time} = child_spec) do
-    monitor = Process.monitor(child_spec.pid)
+  def shutdown(%{pid: pid, shutdown: time}) do
+    monitor = Process.monitor(pid)
     Process.exit(pid, :shutdown)
 
     receive do
-      {:DOWN, ^monitor, ^pid, _reason} ->
+      {:DOWN, ^monitor, :process, ^pid, _reason} ->
         :ok
     after
       time ->
         Process.exit(pid, :kill)
 
         receive do
-          {:DOWN, ^monitor, ^pid, _reason} ->
+          {:DOWN, ^monitor, :process, ^pid, _reason} ->
             :ok
         end
     end
