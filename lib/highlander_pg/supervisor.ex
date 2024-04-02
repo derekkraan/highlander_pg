@@ -16,8 +16,27 @@
 #
 #
 defmodule HighlanderPG.Supervisor do
+  @default_child_spec %{type: :worker, restart: :permanent}
+
+  def handle_child_spec(child_spec) do
+    child_spec =
+      child_spec
+      |> Supervisor.child_spec([])
+
+    child_spec = Map.merge(@default_child_spec, child_spec)
+
+    shutdown =
+      case child_spec do
+        %{shutdown: shutdown} -> shutdown
+        %{type: :worker} -> 5000
+        %{type: :supervisor} -> :infinity
+      end
+
+    Map.put(child_spec, :shutdown, shutdown)
+  end
+
   def shutdown(%{pid: pid, shutdown: :brutal_kill} = child_spec) do
-    monitor = Process.monitor(child_spec)
+    monitor = Process.monitor(child_spec.pid)
     Process.exit(pid, :kill)
 
     receive do
@@ -27,7 +46,7 @@ defmodule HighlanderPG.Supervisor do
   end
 
   def shutdown(%{pid: pid, shutdown: time} = child_spec) do
-    monitor = Process.monitor(child_spec)
+    monitor = Process.monitor(child_spec.pid)
     Process.exit(pid, :shutdown)
 
     receive do

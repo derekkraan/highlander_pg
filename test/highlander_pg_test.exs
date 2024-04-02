@@ -12,7 +12,7 @@ defmodule HighlanderPGTest do
     children = [
       {HighlanderPG,
        [
-         child_spec: {TestServer, [:hello, self()]},
+         child: {TestServer, [:hello, self()]},
          name: :my_test_server,
          connect_opts: @connect_opts
        ]}
@@ -27,15 +27,15 @@ defmodule HighlanderPGTest do
   test "connects to postgres" do
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
-    # child_spec = {TestServer, [:hello, self()]}
+    # child = {TestServer, [:hello, self()]}
 
     # children = [
     #   {HighlanderPG,
-    #    [child_spec: child_spec, name: :my_highlander_pg, connect_opts: @connect_opts]},
+    #    [child: child, name: :my_highlander_pg, connect_opts: @connect_opts]},
     #   Supervisor.child_spec(
     #     {HighlanderPG,
     #      [
-    #        child_spec: child_spec,
+    #        child: child_spec,
     #        name: :my_highlander_pg2,
     #        connect_opts: @connect_opts
     #      ]},
@@ -52,7 +52,7 @@ defmodule HighlanderPGTest do
 
   def sup(name, child_spec) do
     children = [
-      {HighlanderPG, [child_spec: child_spec, name: name, connect_opts: @connect_opts]}
+      {HighlanderPG, [child: child_spec, name: name, connect_opts: @connect_opts]}
     ]
 
     opts = [strategy: :one_for_one]
@@ -75,4 +75,7 @@ defmodule HighlanderPGTest do
     # child_spec = {TestServer2, [:hello, :goodbye, self()]}
     # children = 
   end
+
+  # TEST when process exits unexpectedly (process restarts)
+  # TEST when connection drops unexpectedly (terminate)
 end

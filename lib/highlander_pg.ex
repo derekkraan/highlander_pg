@@ -18,7 +18,7 @@ defmodule HighlanderPG do
 
   children = [
     ...
-    {HighlanderPg, child_spec, [name: "my_unique_name", connect_opts: connect_opts()]},
+    {HighlanderPg, [name: "my_unique_name", child: Supervisor.child_spec(), connect_opts: connect_opts()]},
     ...
   ]
   ```
@@ -85,11 +85,13 @@ defmodule HighlanderPG do
     GenServer.start_link(__MODULE__, init_opts, options)
   end
 
+  @spec gen_options(keyword()) :: {init_opts :: keyword(), opts :: keyword()}
   def gen_options(opts) do
-    case Keyword.pop(opts, :sup_name) do
-      {nil, init_opts} -> {init_opts, []}
-      {name, init_opts} -> {init_opts, [name: name]}
-    end
+    {_init_opts, _options} =
+      case Keyword.pop(opts, :sup_name) do
+        {nil, init_opts} -> {init_opts, []}
+        {name, init_opts} -> {init_opts, [name: name]}
+      end
   end
 
   defstruct [:connect_opts, :pg_pid, :child_spec, :child_pid, :name]
@@ -98,7 +100,9 @@ defmodule HighlanderPG do
   def init(init_opts) do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
-    child_spec = Keyword.fetch!(init_opts, :child_spec) |> Supervisor.child_spec([])
+
+    child_spec = HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
+
     name = Keyword.get(init_opts, :name, __MODULE__)
     # TODO implement default shutdown 5000ms
     # TODO implement shutdown 'brutal kill' & timeout
@@ -133,7 +137,6 @@ defmodule HighlanderPG do
   end
 
   defp get_lock(state) do
-    # TODO turn `id` into the lock id, not `[1, 1]`
     # TODO make the keyspace configurable
     # TODO make the hash function configurable
     case Postgrex.query(state.pg_pid, "select pg_advisory_lock($1, $2)", [
@@ -152,58 +155,16 @@ defmodule HighlanderPG do
     {m, f, a} = state.child_spec.start
 
     case apply(m, f, a) do
-      {:ok, pid} when is_pid(pid) -> %{state | child_pid: pid}
+      {:ok, pid} when is_pid(pid) ->
+        child_spec = Map.put(state.child_spec, :pid, pid)
+        %{state | child_spec: child_spec}
     end
   end
-
-  # defp kill(child_spec) do
-  # end
-
-  # defp do_terminate(child_spec) do
-  #   %{pid: pid, shutdown: shutdown} = child_spec
-
-  #   monitor = Process.monitor(child_pid)
-  #   Process.exit(state.child_pid, :shutdown)
-
-  #   receive do
-  #     {:DOWN, ^monitor, ^child_pid, _reason} ->
-  #       shut_down(state)
-  #   after
-  #     5000 ->
-  #       Process.exit(child_pid, :kill)
-
-  #       receive do
-  #         {:DOWN, ^monitor, ^child_pid, _reason} ->
-  #           shut_down(state)
-  #       end
-  #   end
-  # end
 
   @impl true
   def terminate(:shutdown, state) do
     HighlanderPG.Supervisor.shutdown(state.child_spec)
-    # %{child_pid: child_pid} = state
-    # # TODO support brutal kill
-    # monitor = Process.monitor(child_pid)
-    # Process.exit(state.child_pid, :shutdown)
-
-    # receive do
-    #   {:DOWN, ^monitor, ^child_pid, _reason} ->
-    #     shut_down(state)
-    # after
-    #   5000 ->
-    #     Process.exit(child_pid, :kill)
-
-    #     receive do
-    #       {:DOWN, ^monitor, ^child_pid, _reason} ->
-    #         shut_down(state)
-    #     end
-    # end
   end
-
-  # defp shut_down(state) do
-  #   Postgrex.
-  # end
 
   def terminate(reason, state) do
     IO.inspect({reason, state})
