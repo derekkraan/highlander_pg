@@ -113,10 +113,9 @@ defmodule HighlanderPG do
   @impl GenServer
   def handle_call(:which_children, _ref, state) do
     pid =
-      if is_pid(state.child.pid) do
-        state.child.pid
-      else
-        :undefined
+      case state.child do
+        %{pid: pid} when is_pid(pid) -> pid
+        _ -> :undefined
       end
 
     modules =
@@ -133,44 +132,30 @@ defmodule HighlanderPG do
 
   @impl GenServer
   def handle_continue(:init, state) do
-    state = connect(state)
-
-    if get_lock(state) do
-      {:noreply, Map.put(state, :child, start_child(state.child))}
-    else
-      # TODO try again very soon
-      {:noreply, state}
-    end
+    # wait for the signal to start the process
+    {:noreply, connect(state)}
   end
 
   @impl GenServer
-  def handle_info(_msg, state) do
-    {:noreply, state}
+  def handle_info(:got_lock, state) do
+    {:noreply, Map.put(state, :child, start_child(state.child))}
   end
 
   defp connect(state) do
+    opts =
+      state.connect_opts
+      |> Keyword.put(:sync_connect, false)
+
     postgrex_child =
-      {Postgrex, state.connect_opts}
+      {Postgrex.SimpleConnection, [HighlanderPG.DBLock, [self(), state.name], opts]}
       |> HighlanderPG.Supervisor.handle_child_spec()
       |> start_child()
 
     Map.put(state, :pg_child, postgrex_child)
   end
 
-  defp get_lock(state) do
-    # TODO make the keyspace configurable
-    # TODO make the hash function configurable
-    case Postgrex.query(state.pg_child.pid, "select pg_advisory_lock($1, $2)", [
-           1,
-           :erlang.phash2(state.name)
-         ]) do
-      {:ok,
-       %Postgrex.Result{
-         rows: [[:void]]
-       }} ->
-        true
-    end
-  end
+  # TODO make the keyspace configurable
+  # TODO make the hash function configurable
 
   defp start_child(child) do
     {m, f, a} = child.start
