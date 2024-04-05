@@ -96,7 +96,7 @@ defmodule HighlanderPG do
 
   defstruct [:connect_opts, :pg_child, :child, :name]
 
-  @impl true
+  @impl GenServer
   def init(init_opts) do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
@@ -110,7 +110,28 @@ defmodule HighlanderPG do
     {:ok, state, {:continue, :init}}
   end
 
-  @impl true
+  @impl GenServer
+  def handle_call(:which_children, _ref, state) do
+    pid =
+      if is_pid(state.child.pid) do
+        state.child.pid
+      else
+        :undefined
+      end
+
+    modules =
+      case state.child do
+        %{modules: modules} -> modules
+        %{start: {m, _f, _a}} -> [m]
+      end
+
+    children =
+      [{state.child.id, pid, state.child.type, modules}]
+
+    {:reply, children, state}
+  end
+
+  @impl GenServer
   def handle_continue(:init, state) do
     state = connect(state)
 
@@ -122,7 +143,7 @@ defmodule HighlanderPG do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(_msg, state) do
     {:noreply, state}
   end
@@ -160,37 +181,10 @@ defmodule HighlanderPG do
     end
   end
 
-  # defp start_child(state) do
-  #   {m, f, a} = state.child_spec.start
-
-  #   case apply(m, f, a) do
-  #     {:ok, pid} when is_pid(pid) ->
-  #       child_spec = Map.put(state.child_spec, :pid, pid)
-  #       %{state | child_spec: child_spec}
-  #   end
-  # end
-
-  require Logger
-
-  defmacrop time_it(label, do: block) do
-    quote do
-      IO.inspect("#{unquote(label)} starting")
-      t1 = :erlang.monotonic_time() |> :erlang.convert_time_unit(:native, :millisecond)
-      res = unquote(block)
-      t2 = :erlang.monotonic_time() |> :erlang.convert_time_unit(:native, :millisecond)
-      IO.inspect("#{unquote(label)} took #{t2 - t1}ms")
-      res
-    end
-  end
-
-  @impl true
+  @impl GenServer
   def terminate(:shutdown, state) do
     HighlanderPG.Supervisor.shutdown(state.child)
 
     HighlanderPG.Supervisor.shutdown(state.pg_child)
   end
-
-  # def terminate(reason, _state) do
-  #   IO.inspect(reason, label: "OTHER TERMINATE")
-  # end
 end
