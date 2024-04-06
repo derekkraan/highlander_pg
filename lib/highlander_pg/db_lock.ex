@@ -1,4 +1,5 @@
 defmodule HighlanderPG.DBLock do
+  @moduledoc false
   @behaviour Postgrex.SimpleConnection
 
   @impl Postgrex.SimpleConnection

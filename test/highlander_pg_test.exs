@@ -33,6 +33,17 @@ defmodule HighlanderPGTest do
 
   # TEST bad connection opts = error on start
 
+  test "runs when only given a child module" do
+    {:ok, spid} = sup(:my_highlander_pg6, TestServer3)
+
+    # give time for process to start
+    Process.sleep(100)
+
+    [{HighlanderPG, hpid, _, _}] = Supervisor.which_children(spid)
+    [{TestServer3, pid, _, _}] = Supervisor.which_children(hpid)
+    assert :pong = GenServer.call(pid, :ping)
+  end
+
   test "connects to postgres" do
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})

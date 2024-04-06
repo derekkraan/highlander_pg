@@ -16,6 +16,7 @@
 #
 #
 defmodule HighlanderPG.Supervisor do
+  @moduledoc false
   @default_child_spec %{type: :worker, restart: :permanent}
 
   def handle_child_spec(child_spec) do
