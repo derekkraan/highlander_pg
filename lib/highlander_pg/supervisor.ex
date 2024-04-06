@@ -46,7 +46,7 @@ defmodule HighlanderPG.Supervisor do
     end
   end
 
-  def shutdown(%{pid: pid, shutdown: time}) do
+  def shutdown(%{pid: pid, shutdown: time}) when is_pid(pid) do
     monitor = Process.monitor(pid)
     Process.exit(pid, :shutdown)
 
@@ -63,4 +63,6 @@ defmodule HighlanderPG.Supervisor do
         end
     end
   end
+
+  def shutdown(_), do: :ok
 end

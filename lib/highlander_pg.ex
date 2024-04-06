@@ -30,7 +30,9 @@ defmodule HighlanderPG do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
 
-    child = HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
+    child =
+      HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
+      |> Map.put(:pid, :undefined)
 
     name = Keyword.get(init_opts, :name, __MODULE__)
 
@@ -41,12 +43,6 @@ defmodule HighlanderPG do
 
   @impl GenServer
   def handle_call(:which_children, _ref, state) do
-    pid =
-      case state.child do
-        %{pid: pid} when is_pid(pid) -> pid
-        _ -> :undefined
-      end
-
     modules =
       case state.child do
         %{modules: modules} -> modules
@@ -54,7 +50,7 @@ defmodule HighlanderPG do
       end
 
     children =
-      [{state.child.id, pid, state.child.type, modules}]
+      [{state.child.id, state.child.pid, state.child.type, modules}]
 
     {:reply, children, state}
   end
