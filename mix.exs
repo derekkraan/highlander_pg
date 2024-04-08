@@ -5,7 +5,7 @@ defmodule HighlanderPg.MixProject do
     [
       app: :highlander_pg,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       docs: docs(),
