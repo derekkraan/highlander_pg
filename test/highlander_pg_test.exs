@@ -22,8 +22,6 @@ defmodule HighlanderPGTest do
     assert_receive :hello
   end
 
-  # TEST bad connection opts = error on start
-
   test "runs when only given a child module" do
     {:ok, spid} = sup(:my_highlander_pg6, TestServer3)
 
@@ -106,8 +104,6 @@ defmodule HighlanderPGTest do
     assert %{active: 1, workers: 0, supervisors: 1, specs: 1} ==
              HighlanderPG.count_children(hpid1)
   end
-
-  # TEST works with :via tuple
 
   test "can name HighlanderPG" do
     {:ok, _spid} = sup(:test_server, TestServer3, sup_name: :highlander_pg_named)
