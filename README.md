@@ -74,12 +74,12 @@ Wrap your supervisor or process with HighlanderPG and it will ensure that it onl
 
 # before:
 children = [
-  MyModule
+  MyChild
 ]
 
 # after:
 children = [
-  {HighlanderPG, [MyModule, connect_opts: connect_opts()]},
+  {HighlanderPG, [MyChild, connect_opts: connect_opts()]},
 ]
 ```
 
