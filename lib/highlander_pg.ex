@@ -22,6 +22,10 @@ defmodule HighlanderPG do
     GenServer.call(server, :which_children)
   end
 
+  def count_children(server) do
+    GenServer.call(server, :count_children)
+  end
+
   @spec gen_options(keyword()) :: {init_opts :: keyword(), opts :: keyword()}
   def gen_options(opts) do
     {_init_opts, _options} =
@@ -49,6 +53,23 @@ defmodule HighlanderPG do
   end
 
   @impl GenServer
+
+  def handle_call(:count_children, _ref, state) do
+    reply =
+      cond do
+        state.child.pid == :undefined ->
+          %{active: 0, supervisors: 0, workers: 0, specs: 1}
+
+        state.child.type == :worker ->
+          %{active: 1, supervisors: 0, workers: 1, specs: 1}
+
+        state.child.type == :supervisor ->
+          %{active: 1, supervisors: 1, workers: 0, specs: 1}
+      end
+
+    {:reply, reply, state}
+  end
+
   def handle_call(:which_children, _ref, state) do
     modules =
       case state.child do

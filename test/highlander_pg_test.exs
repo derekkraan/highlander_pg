@@ -77,7 +77,36 @@ defmodule HighlanderPGTest do
              HighlanderPG.which_children(hpid2)
   end
 
-  # TEST when process exits unexpectedly (process restarts)
+  test "implements count_children/1" do
+    {:ok, spid1} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
+    assert_receive :hello
+    {:ok, spid2} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
+    [{HighlanderPG, hpid1, :worker, _children}] = HighlanderPG.which_children(spid1)
+    [{HighlanderPG, hpid2, :worker, _children}] = HighlanderPG.which_children(spid2)
+
+    assert %{active: 1, workers: 1, supervisors: 0, specs: 1} ==
+             HighlanderPG.count_children(hpid1)
+
+    assert %{active: 0, workers: 0, supervisors: 0, specs: 1} ==
+             HighlanderPG.count_children(hpid2)
+  end
+
+  test "count_children/1 counts supervisors" do
+    {:ok, spid1} =
+      sup(:my_highlander_pg11, %{
+        start: {Supervisor, :start_link, [[], [strategy: :one_for_one]]},
+        id: Supervisor,
+        type: :supervisor
+      })
+
+    Process.sleep(100)
+
+    [{HighlanderPG, hpid1, :worker, _children}] = HighlanderPG.which_children(spid1)
+
+    assert %{active: 1, workers: 0, supervisors: 1, specs: 1} ==
+             HighlanderPG.count_children(hpid1)
+  end
+
   # TEST when connection drops unexpectedly (terminate)
   # TEST works with :via tuple
 
