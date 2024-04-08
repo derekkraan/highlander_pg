@@ -79,7 +79,7 @@ children = [
 
 # after:
 children = [
-  {HighlanderPG, [child: MyModule, connect_opts: connect_opts()]},
+  {HighlanderPG, [MyModule, connect_opts: connect_opts()]},
 ]
 ```
 

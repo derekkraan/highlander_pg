@@ -7,11 +7,19 @@ defmodule HighlanderPG do
 
   use GenServer
 
+  defstruct [:connect_opts, :pg_child, :child, :name]
+
   def start_link(opts) do
+    [child | opts] = opts
+
     {init_opts, options} =
       gen_options(opts)
 
-    GenServer.start_link(__MODULE__, init_opts, options)
+    GenServer.start_link(__MODULE__, {child, init_opts}, options)
+  end
+
+  def which_children(server) do
+    GenServer.call(server, :which_children)
   end
 
   @spec gen_options(keyword()) :: {init_opts :: keyword(), opts :: keyword()}
@@ -23,17 +31,16 @@ defmodule HighlanderPG do
       end
   end
 
-  defstruct [:connect_opts, :pg_child, :child, :name]
-
   @impl GenServer
-  def init(init_opts) do
+  def init({child, init_opts}) do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
 
     child =
-      HighlanderPG.Supervisor.handle_child_spec(Keyword.fetch!(init_opts, :child))
+      HighlanderPG.Supervisor.handle_child_spec(child)
       |> Map.put(:pid, :undefined)
 
+    # TODO make `name` default to module of GenServer instead of module of HighlanderPG?
     name = Keyword.get(init_opts, :name, __MODULE__)
 
     state = %__MODULE__{connect_opts: connect_opts, child: child, name: name}
@@ -64,6 +71,10 @@ defmodule HighlanderPG do
   @impl GenServer
   def handle_info(:got_lock, state) do
     {:noreply, Map.put(state, :child, start_child(state.child))}
+  end
+
+  def handle_info({:EXIT, _pid, _reason}, state) do
+    {:stop, :shutdown, state}
   end
 
   defp connect(state) do

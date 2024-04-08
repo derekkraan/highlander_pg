@@ -17,7 +17,9 @@ defmodule TestServer2 do
   use GenServer
 
   def start_link(init_arg) do
-    GenServer.start_link(__MODULE__, init_arg, [])
+    [msg_start, msg_stop, pid | start_opts] = init_arg
+
+    GenServer.start_link(__MODULE__, [msg_start, msg_stop, pid], start_opts)
   end
 
   def init(arg) do
@@ -26,6 +28,10 @@ defmodule TestServer2 do
     Process.flag(:trap_exit, true)
 
     {:ok, arg}
+  end
+
+  def handle_info({:stop, reason}, state) do
+    {:stop, reason, state}
   end
 
   def terminate(_reason, state) do
@@ -40,7 +46,16 @@ defmodule TestServer3 do
   use GenServer
 
   def start_link(init_arg) do
-    GenServer.start_link(__MODULE__, init_arg, [])
+    {init_arg, start_opts} =
+      case Keyword.pop(init_arg, :name) do
+        {nil, init_arg} ->
+          {init_arg, []}
+
+        {name, init_arg} ->
+          {init_arg, [name: name]}
+      end
+
+    GenServer.start_link(__MODULE__, init_arg, start_opts)
   end
 
   def init(arg) do
