@@ -107,7 +107,6 @@ defmodule HighlanderPGTest do
              HighlanderPG.count_children(hpid1)
   end
 
-  # TEST when connection drops unexpectedly (terminate)
   # TEST works with :via tuple
 
   test "can name HighlanderPG" do
@@ -150,6 +149,22 @@ defmodule HighlanderPGTest do
     refute_receive :hello
 
     send(GenServer.whereis(:process_exits2), {:stop, "bad reason"})
+    assert_receive {:EXIT, ^hpid1, :shutdown}
+    assert_receive :hello
+  end
+
+  test "highlander exits when connection drops unexpectedly" do
+    Process.flag(:trap_exit, true)
+
+    child = {TestServer2, [:hello, :goodbye, self()]}
+
+    {:ok, hpid1} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    assert_receive :hello
+    %{pg_child: %{pid: pg_pid}} = :sys.get_state(hpid1)
+    {:ok, _hpid2} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    refute_receive :hello
+
+    Process.exit(pg_pid, :kill)
     assert_receive {:EXIT, ^hpid1, :shutdown}
     assert_receive :hello
   end
