@@ -63,7 +63,7 @@ Licenses are based on a yearly fee, which reflects the volume of ongoing mainten
 | Failure mode: runs your process 0x | | ✓ [1] |
 | Supports further development | | ✓ |
 
-[1] It is possible that Postgres might give out an advisory lock while another node still thinks it has the lock. This situation will resolve itself after the other node's Postgres connection times out. This time-out is configurable in connect_opts. See below for details.
+[1] It is possible that Postgres might give out an advisory lock while another node still thinks it has the lock. This situation will resolve itself after the other node's Postgres connection times out. This time-out is configurable in connect_opts. See the docs for details.
 
 # Usage
 
