@@ -10,7 +10,7 @@ defmodule HighlanderPGTest do
 
   def sup(name, child_spec, opts \\ []) do
     children = [
-      {HighlanderPG, [child_spec, name: name, connect_opts: @connect_opts] ++ opts}
+      {HighlanderPG, [child: child_spec, name: name, connect_opts: @connect_opts] ++ opts}
     ]
 
     opts = [strategy: :one_for_one]
@@ -124,9 +124,9 @@ defmodule HighlanderPGTest do
 
     child = {TestServer2, [:hello, :goodbye, self(), name: :process_exits]}
 
-    {:ok, hpid1} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     assert_receive :hello
-    {:ok, _hpid2} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     refute_receive :hello
 
     send(GenServer.whereis(:process_exits), {:stop, :shutdown})
@@ -139,9 +139,9 @@ defmodule HighlanderPGTest do
 
     child = {TestServer2, [:hello, :goodbye, self(), name: :process_exits2]}
 
-    {:ok, hpid1} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     assert_receive :hello
-    {:ok, _hpid2} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     refute_receive :hello
 
     send(GenServer.whereis(:process_exits2), {:stop, "bad reason"})
@@ -154,10 +154,10 @@ defmodule HighlanderPGTest do
 
     child = {TestServer2, [:hello, :goodbye, self()]}
 
-    {:ok, hpid1} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     assert_receive :hello
     %{pg_child: %{pid: pg_pid}} = :sys.get_state(hpid1)
-    {:ok, _hpid2} = HighlanderPG.start_link([child, connect_opts: @connect_opts])
+    {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     refute_receive :hello
 
     Process.exit(pg_pid, :kill)

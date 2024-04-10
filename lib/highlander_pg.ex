@@ -9,25 +9,87 @@ defmodule HighlanderPG do
 
   defstruct [:connect_opts, :pg_child, :child, :name]
 
-  def start_link(opts) do
-    [child | opts] = opts
+  @type start_opt ::
+          {:child, Supervisor.child_spec()}
+          | {:connect_opts, keyword()}
+          | {:name, term()}
+          | {:sup_name, term()}
 
-    {init_opts, options} =
+  @spec start_link([start_opt()]) :: Supervisor.on_start()
+  @doc """
+  Starts HighlanderPG.
+
+  This function is normally not called directly. You would incorporate HighlanderPG in your supervision tree as follows:
+
+  ```elixir
+  # lib/application.ex
+
+  highlander_child = {MyUniqueProcess, arg}
+
+  children = [
+    ...
+    {HighlanderPG, [child: highlander_child, connect_opts: connect_opts()]}
+    ...
+  ]
+
+  Supervisor.init(children, strategy: :one_for_one)
+  ```
+
+  Options are documented below:
+  - `:child` -- mandatory, the child spec of the process or supervisor that HighlanderPG will run.
+  - `:connect_opts` -- mandatory, these are passed to `Postgrex.SimpleConnection.start_link/3`. See `Postgrex.start_link/1` for the most relevant options.
+  - `:sup_name` -- optional, if you wish to give HighlanderPG's process a name so you can easily access it later.
+    ```
+    children = [
+      {HighlanderPG, [child: child, connect_opts: connect_opts, sup_name: :my_highlander]}
+    ]
+
+    # later
+    HighlanderPG.count_children(:my_highlander)
+    #=> %{active: 1, workers: 1, supervisors: 0, specs: 1}
+    ```
+
+  - `:name` -- optional, the key on which HighlanderPG ensures your supervised process or supervisor is unique. The default value is `HighlanderPG` which means that if you wish to use HighlanderPG to monitor multiple globally unique processes, you will need to override this value.
+    ```
+    children = [
+      {HighlanderPG, [child: child1, connect_opts: connect_opts, name: :highlander1]},
+      {HighlanderPG, [child: child2, connect_opts: connect_opts, name: :highlander2]},
+    ]
+    ```
+  """
+  def start_link(opts) do
+    {child, opts} = Keyword.pop(opts, :child)
+
+    {init_opts, start_opts} =
       gen_options(opts)
 
-    GenServer.start_link(__MODULE__, {child, init_opts}, options)
+    GenServer.start_link(__MODULE__, {child, init_opts}, start_opts)
   end
 
+  @spec which_children(Supervisor.supervisor()) :: [
+          {term() | :undefined, Supervisor.child(), :worker | :supervisor, [module()] | :dynamic}
+        ]
+  @doc """
+  See `Supervisor.which_children/1`.
+  """
   def which_children(server) do
     GenServer.call(server, :which_children)
   end
 
+  @spec count_children(Supervisor.supervisor()) :: %{
+          specs: non_neg_integer(),
+          active: non_neg_integer(),
+          supervisors: non_neg_integer(),
+          workers: non_neg_integer()
+        }
+  @doc """
+  See `Supervisor.count_children/1`.
+  """
   def count_children(server) do
     GenServer.call(server, :count_children)
   end
 
-  @spec gen_options(keyword()) :: {init_opts :: keyword(), opts :: keyword()}
-  def gen_options(opts) do
+  defp gen_options(opts) do
     {_init_opts, _options} =
       case Keyword.pop(opts, :sup_name) do
         {nil, init_opts} -> {init_opts, []}
@@ -53,7 +115,6 @@ defmodule HighlanderPG do
   end
 
   @impl GenServer
-
   def handle_call(:count_children, _ref, state) do
     reply =
       cond do

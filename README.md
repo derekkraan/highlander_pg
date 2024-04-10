@@ -51,7 +51,7 @@ HighlanderPG is also a paid library, and it differs in this way from Highlander,
 
 By purchasing a license for HighlanderPG, you will be supporting its maintenance and further development.
 
-Licenses are based on a yearly fee, which reflects the volume of ongoing maintenance and bugfixes. If you do the math, you'll quickly realize that HighlanderPG is a very good deal compared to developing and maintaining this functionality yourself.
+Licenses are based on a yearly fee, which reflects the volume of ongoing maintenance and bugfixes. If you do the math, you'll quickly realize that HighlanderPG is a very good deal compared to developing and maintaining this specialized functionality yourself.
 
 ## Summary
 
@@ -63,7 +63,7 @@ Licenses are based on a yearly fee, which reflects the volume of ongoing mainten
 | Failure mode: runs your process 0x | | ✓ [1] |
 | Supports further development | | ✓ |
 
-[1] It is possible that Postgres might give out an advisory lock while another node still thinks it has the lock. This situation will resolve itself after the other node's Postgres connection times out.
+[1] It is possible that Postgres might give out an advisory lock while another node still thinks it has the lock. This situation will resolve itself after the other node's Postgres connection times out. This time-out is configurable in connect_opts. See below for details.
 
 # Usage
 
@@ -79,7 +79,7 @@ children = [
 
 # after:
 children = [
-  {HighlanderPG, [MyChild, connect_opts: connect_opts()]},
+  {HighlanderPG, %{child: MyChild, connect_opts: connect_opts()}},
 ]
 ```
 
@@ -116,8 +116,8 @@ GenServer.start_link(MyGenServer, args, name: {:global, "my_global_name"})
 
 # child_spec
 %{
-id: MyGenServer,
-start: {GenServer, :start_link, [MyGenServer, args, name: {:global, "my_global_name}]}
+  id: MyGenServer,
+  start: {GenServer, :start_link, [MyGenServer, args, name: {:global, "my_global_name}]}
 }
 ```
 
