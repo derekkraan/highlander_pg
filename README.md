@@ -56,6 +56,7 @@ Licenses are based on a yearly fee, which reflects the volume of ongoing mainten
 ## Summary
 
 |  | **Highlander** | **HighlanderPG** |
+| --- | --- | --- |
 | Runs your process once, globally | ✓ | ✓ |
 | Works with Erlang Clustering | ✓ | ✓ |
 | Works without Erlang Clustering | | ✓ |
