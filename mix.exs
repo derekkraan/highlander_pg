@@ -40,7 +40,7 @@ defmodule HighlanderPg.MixProject do
 
   defp package() do
     [
-      description: "There can only be one! (run a globally unique singleton processes)",
+      description: "There can only be one! (run a globally unique singleton process)",
       licenses: ["COMMERCIAL"],
       maintainers: ["Derek Kraan"],
       links: %{}
