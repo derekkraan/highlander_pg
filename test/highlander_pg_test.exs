@@ -20,7 +20,7 @@ defmodule HighlanderPGTest do
 
   test "can start a child" do
     {:ok, _sup} = sup(:my_test_server, {TestServer, [:hello, self()]})
-    assert_receive :hello
+    assert_receive :hello, 500
   end
 
   test "runs when only given a child module" do
@@ -37,21 +37,21 @@ defmodule HighlanderPGTest do
   test "connects to postgres" do
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
     sup(:my_highlander_pg2, {TestServer, [:hello, self()]})
-    assert_receive(:hello)
+    assert_receive(:hello, 500)
     refute_receive(:hello, 500)
   end
 
   test "shuts down gracefully" do
     {:ok, spid1} = sup(:my_highlander_pg3, {TestServer2, [:hello, :goodbye, self()]})
-    assert_receive(:hello)
+    assert_receive(:hello, 500)
     Supervisor.stop(spid1)
-    assert_receive(:goodbye)
+    assert_receive(:goodbye, 500)
   end
 
   test "starts a second process when the first dies" do
     {:ok, spid1} = sup(:my_highlander_pg4, {TestServer2, [:hello, :goodbye, self()]})
 
-    assert_receive(:hello)
+    assert_receive(:hello, 500)
 
     {:ok, _spid2} = sup(:my_highlander_pg4, {TestServer2, [:hello, :goodbye, self()]})
 
@@ -60,12 +60,12 @@ defmodule HighlanderPGTest do
     Supervisor.stop(spid1)
     assert_receive(:goodbye, 500)
 
-    assert_receive(:hello)
+    assert_receive(:hello, 500)
   end
 
   test "implements which_children/1" do
     {:ok, spid1} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
-    assert_receive :hello
+    assert_receive :hello, 500
     {:ok, spid2} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
     [{HighlanderPG, hpid, :supervisor, _children}] = Supervisor.which_children(spid1)
     assert [{TestServer2, pid, :worker, [TestServer2]}] = HighlanderPG.which_children(hpid)
@@ -78,7 +78,7 @@ defmodule HighlanderPGTest do
 
   test "implements count_children/1" do
     {:ok, spid1} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
-    assert_receive :hello
+    assert_receive :hello, 500
     {:ok, spid2} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
     [{HighlanderPG, hpid1, :supervisor, _children}] = Supervisor.which_children(spid1)
     [{HighlanderPG, hpid2, :supervisor, _children}] = Supervisor.which_children(spid2)
@@ -126,13 +126,13 @@ defmodule HighlanderPGTest do
     child = {TestServer2, [:hello, :goodbye, self(), name: :process_exits]}
 
     {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    assert_receive :hello
+    assert_receive :hello, 500
     {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    refute_receive :hello
+    refute_receive :hello, 500
 
     send(GenServer.whereis(:process_exits), {:stop, :shutdown})
-    assert_receive {:EXIT, ^hpid1, :shutdown}
-    assert_receive :hello
+    assert_receive {:EXIT, ^hpid1, :shutdown}, 500
+    assert_receive :hello, 500
   end
 
   test "highlander exits and closes connection when process exits unexpectedly" do
@@ -141,13 +141,13 @@ defmodule HighlanderPGTest do
     child = {TestServer2, [:hello, :goodbye, self(), name: :process_exits2]}
 
     {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    assert_receive :hello
+    assert_receive :hello, 500
     {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    refute_receive :hello
+    refute_receive :hello, 500
 
     send(GenServer.whereis(:process_exits2), {:stop, "bad reason"})
-    assert_receive {:EXIT, ^hpid1, :shutdown}
-    assert_receive :hello
+    assert_receive {:EXIT, ^hpid1, :shutdown}, 500
+    assert_receive :hello, 500
   end
 
   test "highlander exits when connection drops unexpectedly" do
@@ -156,13 +156,13 @@ defmodule HighlanderPGTest do
     child = {TestServer2, [:hello, :goodbye, self()]}
 
     {:ok, hpid1} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    assert_receive :hello
+    assert_receive :hello, 500
     %{pg_child: %{pid: pg_pid}} = :sys.get_state(hpid1)
     {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
-    refute_receive :hello
+    refute_receive :hello, 500
 
     Process.exit(pg_pid, :kill)
     assert_receive {:EXIT, ^hpid1, :shutdown}
-    assert_receive :hello
+    assert_receive :hello, 500
   end
 end
