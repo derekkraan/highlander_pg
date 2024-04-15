@@ -26,7 +26,7 @@ def deps do
 end
 ```
 
-Full documentation can be found on Code Code Ship at <https://hexdocs.codecodeship.com/highlander_pg/1.0.0>.
+Full documentation can be found on Code Code Ship at <http://hexdocs.codecodeship.com/highlander_pg/1.0.0>.
 
 # Highlander vs HighlanderPG
 
