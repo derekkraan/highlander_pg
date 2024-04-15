@@ -5,7 +5,7 @@ defmodule HighlanderPG do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
-  use GenServer
+  use GenServer, type: :supervisor
 
   defstruct [:connect_opts, :pg_child, :child, :name]
 

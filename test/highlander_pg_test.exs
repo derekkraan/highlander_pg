@@ -5,7 +5,8 @@ defmodule HighlanderPGTest do
   @connect_opts [
     username: "postgres",
     password: "postgres",
-    database: "highlander"
+    database: "highlander",
+    port: "5431"
   ]
 
   def sup(name, child_spec, opts \\ []) do
@@ -66,10 +67,10 @@ defmodule HighlanderPGTest do
     {:ok, spid1} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
     assert_receive :hello
     {:ok, spid2} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
-    [{HighlanderPG, hpid, :worker, _children}] = HighlanderPG.which_children(spid1)
+    [{HighlanderPG, hpid, :supervisor, _children}] = Supervisor.which_children(spid1)
     assert [{TestServer2, pid, :worker, [TestServer2]}] = HighlanderPG.which_children(hpid)
     assert is_pid(pid)
-    [{HighlanderPG, hpid2, :worker, _children}] = HighlanderPG.which_children(spid2)
+    [{HighlanderPG, hpid2, :supervisor, _children}] = Supervisor.which_children(spid2)
 
     assert [{TestServer2, :undefined, :worker, [TestServer2]}] =
              HighlanderPG.which_children(hpid2)
@@ -79,8 +80,8 @@ defmodule HighlanderPGTest do
     {:ok, spid1} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
     assert_receive :hello
     {:ok, spid2} = sup(:my_highlander_pg5, {TestServer2, [:hello, :goodbye, self()]})
-    [{HighlanderPG, hpid1, :worker, _children}] = HighlanderPG.which_children(spid1)
-    [{HighlanderPG, hpid2, :worker, _children}] = HighlanderPG.which_children(spid2)
+    [{HighlanderPG, hpid1, :supervisor, _children}] = Supervisor.which_children(spid1)
+    [{HighlanderPG, hpid2, :supervisor, _children}] = Supervisor.which_children(spid2)
 
     assert %{active: 1, workers: 1, supervisors: 0, specs: 1} ==
              HighlanderPG.count_children(hpid1)
@@ -99,7 +100,7 @@ defmodule HighlanderPGTest do
 
     Process.sleep(100)
 
-    [{HighlanderPG, hpid1, :worker, _children}] = HighlanderPG.which_children(spid1)
+    [{HighlanderPG, hpid1, :supervisor, _children}] = Supervisor.which_children(spid1)
 
     assert %{active: 1, workers: 0, supervisors: 1, specs: 1} ==
              HighlanderPG.count_children(hpid1)
