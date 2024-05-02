@@ -80,7 +80,7 @@ children = [
 
 # after:
 children = [
-  {HighlanderPG, %{child: MyChild, connect_opts: connect_opts()}},
+  {HighlanderPG, [child: MyChild, connect_opts: connect_opts()]},
 ]
 ```
 
