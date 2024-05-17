@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.0.3
+
+Fixed a bug that caused Postgres VACUUM to fail to clean up dead rows while HighlanderPG was waiting for a lock.
+
+When a child process returns `{:error, reason}` on start, log the error and shut down HighlanderPG. Previously the error was formatted in a way that made it hard to read.
+
 ## 1.0.2
 
 Minor fix to documentation.
