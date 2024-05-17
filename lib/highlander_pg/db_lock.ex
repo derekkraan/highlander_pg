@@ -7,31 +7,36 @@ defmodule HighlanderPG.DBLock do
     {:ok, %{from: {pid, name}, name: name}}
   end
 
-  # @impl Postgrex.SimpleConnection
-  # def handle_call({:query, query}, from, state) do
-  #   {:query, query, %{state | from: from}}
-  # end
-
   @impl Postgrex.SimpleConnection
   def handle_connect(state) do
-    {:query, "select pg_advisory_lock(1, #{:erlang.phash2(state.name)})", state}
+    {:query, query(state), state}
   end
 
   @impl Postgrex.SimpleConnection
   def handle_result(results, state) when is_list(results) do
-    {pid, _name} = state.from
-    send(pid, :got_lock)
-    {:noreply, state}
+    case results do
+      [%{rows: [["t"]]}] ->
+        {pid, _name} = state.from
+        send(pid, :got_lock)
+        {:noreply, state}
+
+      [%{rows: [["f"]]}] ->
+        Process.send_after(self(), :try_again, 100)
+        {:noreply, state}
+    end
   end
 
   @impl Postgrex.SimpleConnection
-  def handle_result(%Postgrex.Error{} = error, state) do
-    Postgrex.SimpleConnection.reply(state.from, error)
-    {:noreply, state}
+  def handle_info(:try_again, state) do
+    {:query, query(state), state}
   end
 
   @impl Postgrex.SimpleConnection
   def notify(_, _, state) do
     {:noreply, state}
+  end
+
+  defp query(state) do
+    "select pg_try_advisory_lock(1, #{:erlang.phash2(state.name)})"
   end
 end
