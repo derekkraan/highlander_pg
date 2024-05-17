@@ -66,3 +66,19 @@ defmodule TestServer3 do
     {:reply, :pong, state}
   end
 end
+
+defmodule ErrorServer do
+  use GenServer
+
+  def start_link(init_arg) do
+    GenServer.start_link(__MODULE__, init_arg, [])
+  end
+
+  def init(arg) do
+    [msg, pid] = arg
+    send(pid, msg)
+    raise "stop here"
+
+    {:ok, arg}
+  end
+end

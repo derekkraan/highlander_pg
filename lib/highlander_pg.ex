@@ -6,6 +6,7 @@ defmodule HighlanderPG do
              |> Enum.fetch!(1)
 
   use GenServer, type: :supervisor
+  require Logger
 
   defstruct [:connect_opts, :pg_child, :child, :name, :polling_interval]
 
@@ -126,7 +127,13 @@ defmodule HighlanderPG do
   @impl GenServer
   def handle_continue(:init, state) do
     # wait for the signal to start the process
-    {:noreply, connect(state)}
+    case connect(state) do
+      {:ok, state} ->
+        {:noreply, state}
+
+      :abort ->
+        {:stop, :shutdown, state}
+    end
   end
 
   @impl GenServer
@@ -161,7 +168,13 @@ defmodule HighlanderPG do
 
   @impl GenServer
   def handle_info(:got_lock, state) do
-    {:noreply, Map.put(state, :child, start_child(state.child))}
+    case start_child(state.child, state) do
+      {:ok, child} ->
+        {:noreply, Map.put(state, :child, child)}
+
+      :abort ->
+        {:stop, :shutdown, state}
+    end
   end
 
   def handle_info({:EXIT, _pid, _reason}, state) do
@@ -173,25 +186,82 @@ defmodule HighlanderPG do
       state.connect_opts
       |> Keyword.put(:sync_connect, false)
 
-    postgrex_child =
+    child =
       {Postgrex.SimpleConnection,
        [HighlanderPG.DBLock, [self(), state.name, state.polling_interval], opts]}
       |> HighlanderPG.Supervisor.handle_child_spec()
-      |> start_child()
 
-    Map.put(state, :pg_child, postgrex_child)
+    case start_child(child, state) do
+      {:ok, postgrex_child} ->
+        {:ok, Map.put(state, :pg_child, postgrex_child)}
+
+      :abort ->
+        :abort
+    end
   end
 
   # TODO make the keyspace configurable
   # TODO make the hash function configurable
 
-  defp start_child(child) do
+  defp start_child(child, state) do
     {m, f, a} = child.start
 
     case apply(m, f, a) do
       {:ok, pid} when is_pid(pid) ->
-        Map.put(child, :pid, pid)
+        {:ok, Map.put(child, :pid, pid)}
+
+      {:error, reason} ->
+        report_error(:start_error, reason, child, state.name)
+        :abort
     end
+  end
+
+  defp extract_child(child) when is_list(child.pid) do
+    [
+      nb_children: length(child.pid),
+      id: child.id,
+      mfargs: child.start,
+      restart_type: :undefined,
+      significant: false,
+      shutdown: child.shutdown,
+      child_type: child.type
+    ]
+  end
+
+  defp extract_child(child) do
+    [
+      pid: child.pid,
+      id: child.id,
+      mfargs: child.start,
+      restart_type: :undefined,
+      significant: false,
+      shutdown: child.shutdown,
+      child_type: child.type
+    ]
+  end
+
+  defp report_error(error, reason, child, sup_name) do
+    Logger.error(
+      %{
+        label: {:supervisor, reason},
+        report: [
+          supervisor: sup_name,
+          errorContext: error,
+          reason: reason,
+          offender: extract_child(child)
+        ]
+      },
+      %{
+        domain: [:otp, :sasl],
+        report_cb: &:supervisor.format_log/2,
+        logger_formatter: %{title: "HIGHLANDER_PG REPORT"},
+        error_logger: %{
+          tag: :error_report,
+          type: :supervisor_report,
+          report_db: &:supervisor.format_log/1
+        }
+      }
+    )
   end
 
   @impl GenServer

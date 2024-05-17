@@ -1,6 +1,7 @@
 defmodule HighlanderPGTest do
   use ExUnit.Case
   doctest HighlanderPG
+  import ExUnit.CaptureLog
 
   @connect_opts [
     username: "postgres",
@@ -22,6 +23,15 @@ defmodule HighlanderPGTest do
   test "can start a child" do
     {:ok, _sup} = sup(:my_test_server, {TestServer, [:hello, self()]})
     assert_receive :hello, 500
+  end
+
+  test "reports an error" do
+    Process.flag(:trap_exit, true)
+
+    assert capture_log(fn ->
+             {:ok, _sup} = sup(:error_server, {ErrorServer, [:hello, self()]})
+             Process.sleep(200)
+           end) =~ "Child ErrorServer of Supervisor :error_server failed to start"
   end
 
   test "runs when only given a child module" do
