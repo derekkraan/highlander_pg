@@ -11,7 +11,8 @@ defmodule HighlanderPGTest do
 
   def sup(name, child_spec, opts \\ []) do
     children = [
-      {HighlanderPG, [child: child_spec, name: name, connect_opts: @connect_opts] ++ opts}
+      {HighlanderPG,
+       [child: child_spec, name: name, connect_opts: @connect_opts, polling_interval: 50] ++ opts}
     ]
 
     opts = [strategy: :one_for_one]

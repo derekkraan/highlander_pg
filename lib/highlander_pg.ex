@@ -7,15 +7,17 @@ defmodule HighlanderPG do
 
   use GenServer, type: :supervisor
 
-  defstruct [:connect_opts, :pg_child, :child, :name]
+  defstruct [:connect_opts, :pg_child, :child, :name, :polling_interval]
 
   @type start_opt ::
           {:child, Supervisor.child_spec()}
           | {:connect_opts, keyword()}
           | {:name, term()}
           | {:sup_name, term()}
+          | {:polling_interval, integer()}
 
   @spec start_link([start_opt()]) :: Supervisor.on_start()
+  @default_polling_interval 300
   @doc """
   Starts HighlanderPG.
 
@@ -39,9 +41,10 @@ defmodule HighlanderPG do
   - `:child` -- mandatory, the child spec of the process or supervisor that HighlanderPG will run.
   - `:connect_opts` -- mandatory, these are passed to `Postgrex.SimpleConnection.start_link/3`. See `Postgrex.start_link/1` for the most relevant options.
   - `:sup_name` -- optional, if you wish to give HighlanderPG's process a name so you can easily access it later.
+  - `:polling_interval` -- optional, if you wish to configure HighlanderPG's polling interval (milliseconds). Default is #{@default_polling_interval} if left unspecified.
     ```
     children = [
-      {HighlanderPG, [child: child, connect_opts: connect_opts, sup_name: :my_highlander]}
+      {HighlanderPG, [child: child, connect_opts: connect_opts, sup_name: :my_highlander, polling_interval: 100]}
     ]
 
     # later
@@ -101,6 +104,7 @@ defmodule HighlanderPG do
   def init({child, init_opts}) do
     Process.flag(:trap_exit, true)
     connect_opts = Keyword.fetch!(init_opts, :connect_opts)
+    polling_interval = Keyword.get(init_opts, :polling_interval, @default_polling_interval)
 
     child =
       HighlanderPG.Supervisor.handle_child_spec(child)
@@ -109,9 +113,20 @@ defmodule HighlanderPG do
     # TODO make `name` default to module of GenServer instead of module of HighlanderPG?
     name = Keyword.get(init_opts, :name, __MODULE__)
 
-    state = %__MODULE__{connect_opts: connect_opts, child: child, name: name}
+    state = %__MODULE__{
+      connect_opts: connect_opts,
+      child: child,
+      name: name,
+      polling_interval: polling_interval
+    }
 
     {:ok, state, {:continue, :init}}
+  end
+
+  @impl GenServer
+  def handle_continue(:init, state) do
+    # wait for the signal to start the process
+    {:noreply, connect(state)}
   end
 
   @impl GenServer
@@ -145,12 +160,6 @@ defmodule HighlanderPG do
   end
 
   @impl GenServer
-  def handle_continue(:init, state) do
-    # wait for the signal to start the process
-    {:noreply, connect(state)}
-  end
-
-  @impl GenServer
   def handle_info(:got_lock, state) do
     {:noreply, Map.put(state, :child, start_child(state.child))}
   end
@@ -165,7 +174,8 @@ defmodule HighlanderPG do
       |> Keyword.put(:sync_connect, false)
 
     postgrex_child =
-      {Postgrex.SimpleConnection, [HighlanderPG.DBLock, [self(), state.name], opts]}
+      {Postgrex.SimpleConnection,
+       [HighlanderPG.DBLock, [self(), state.name, state.polling_interval], opts]}
       |> HighlanderPG.Supervisor.handle_child_spec()
       |> start_child()
 

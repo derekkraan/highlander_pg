@@ -3,8 +3,8 @@ defmodule HighlanderPG.DBLock do
   @behaviour Postgrex.SimpleConnection
 
   @impl Postgrex.SimpleConnection
-  def init([pid, name]) do
-    {:ok, %{from: {pid, name}, name: name}}
+  def init([pid, name, polling_interval]) do
+    {:ok, %{from: {pid, name}, name: name, polling_interval: polling_interval}}
   end
 
   @impl Postgrex.SimpleConnection
@@ -21,7 +21,7 @@ defmodule HighlanderPG.DBLock do
         {:noreply, state}
 
       [%{rows: [["f"]]}] ->
-        Process.send_after(self(), :try_again, 100)
+        Process.send_after(self(), :try_again, state.polling_interval)
         {:noreply, state}
     end
   end
