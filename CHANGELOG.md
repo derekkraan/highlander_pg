@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.4
+
+Update dependencies to allow postgrex 0.18.x.
+
 ## 1.0.3
 
 Fixed a bug that caused Postgres VACUUM to fail to clean up dead rows while HighlanderPG was waiting for a lock.
