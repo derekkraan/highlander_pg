@@ -25,7 +25,7 @@ defmodule HighlanderPg.MixProject do
 
   defp deps do
     [
-      {:postgrex, "~> 0.16.1 or ~> 0.17.0 or ~> 0.18.0 or ~> 0.19.1"},
+      {:postgrex, "~> 0.16.1 or ~> 0.17.0 or ~> 0.18.0 or ~> 0.19.0"},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
