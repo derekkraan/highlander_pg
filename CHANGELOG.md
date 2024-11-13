@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.6
+
+Add and prefer `:repo` option. This simplifies setup for anyone using Ecto.
+
 ## 1.0.5
 
 Update dependencies to allow postgrex 0.19.x.

@@ -8,11 +8,12 @@ defmodule HighlanderPG do
   use GenServer, type: :supervisor
   require Logger
 
-  defstruct [:connect_opts, :pg_child, :child, :name, :polling_interval]
+  defstruct [:connect_opts, :repo, :pg_child, :child, :name, :polling_interval]
 
   @type start_opt ::
           {:child, Supervisor.child_spec()}
           | {:connect_opts, keyword()}
+          | {:repo, module()}
           | {:name, term()}
           | {:sup_name, term()}
           | {:polling_interval, integer()}
@@ -27,11 +28,11 @@ defmodule HighlanderPG do
   ```elixir
   # lib/application.ex
 
-  highlander_child = {MyUniqueProcess, arg}
+  my_child = {MyUniqueProcess, arg}
 
   children = [
     ...
-    {HighlanderPG, [child: highlander_child, connect_opts: connect_opts()]}
+    {HighlanderPG, [child: my_child, repo: MyApp.Repo]}
     ...
   ]
 
@@ -40,12 +41,13 @@ defmodule HighlanderPG do
 
   Options are documented below:
   - `:child` -- mandatory, the child spec of the process or supervisor that HighlanderPG will run.
-  - `:connect_opts` -- mandatory, these are passed to `Postgrex.SimpleConnection.start_link/3`. See `Postgrex.start_link/1` for the most relevant options.
+  - `:connect_opts` -- optional, these are passed to `Postgrex.SimpleConnection.start_link/3`. See `Postgrex.start_link/1` for the most relevant options.
+  - `:repo` -- optional (one of `:connect_opts` or `:repo` must be specified) -- your Ecto Repo. Highlander will take the configuration and create a new connection for the advisory lock.
   - `:sup_name` -- optional, if you wish to give HighlanderPG's process a name so you can easily access it later.
   - `:polling_interval` -- optional, if you wish to configure HighlanderPG's polling interval (milliseconds). Default is #{@default_polling_interval} if left unspecified.
     ```
     children = [
-      {HighlanderPG, [child: child, connect_opts: connect_opts, sup_name: :my_highlander, polling_interval: 100]}
+      {HighlanderPG, [child: child, connect_opts: connect_opts, repo: repo, sup_name: :my_highlander, polling_interval: 100]}
     ]
 
     # later
@@ -56,8 +58,8 @@ defmodule HighlanderPG do
   - `:name` -- optional, the key on which HighlanderPG ensures your supervised process or supervisor is unique. The default value is `HighlanderPG` which means that if you wish to use HighlanderPG to monitor multiple globally unique processes, you will need to override this value.
     ```
     children = [
-      {HighlanderPG, [child: child1, connect_opts: connect_opts, name: :highlander1]},
-      {HighlanderPG, [child: child2, connect_opts: connect_opts, name: :highlander2]},
+      {HighlanderPG, [child: child1, repo: repo, name: :highlander1]},
+      {HighlanderPG, [child: child2, repo: repo, name: :highlander2]},
     ]
     ```
   """
@@ -104,8 +106,13 @@ defmodule HighlanderPG do
   @impl GenServer
   def init({child, init_opts}) do
     Process.flag(:trap_exit, true)
-    connect_opts = Keyword.fetch!(init_opts, :connect_opts)
+    repo = Keyword.get(init_opts, :repo, nil)
+    connect_opts = Keyword.get(init_opts, :connect_opts, [])
     polling_interval = Keyword.get(init_opts, :polling_interval, @default_polling_interval)
+
+    if repo == nil and connect_opts == [] do
+      raise ArgumentError, "expected one of `repo` or `connect_ops`, got neither"
+    end
 
     child =
       HighlanderPG.Supervisor.handle_child_spec(child)
@@ -115,6 +122,7 @@ defmodule HighlanderPG do
     name = Keyword.get(init_opts, :name, __MODULE__)
 
     state = %__MODULE__{
+      repo: repo,
       connect_opts: connect_opts,
       child: child,
       name: name,
@@ -183,7 +191,11 @@ defmodule HighlanderPG do
 
   defp connect(state) do
     opts =
-      state.connect_opts
+      if state.repo do
+        state.repo.config()
+      else
+        state.connect_opts
+      end
       |> Keyword.put(:sync_connect, false)
 
     child =

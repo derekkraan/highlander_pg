@@ -13,11 +13,27 @@ defmodule HighlanderPGTest do
   def sup(name, child_spec, opts \\ []) do
     children = [
       {HighlanderPG,
-       [child: child_spec, name: name, connect_opts: @connect_opts, polling_interval: 50] ++ opts}
+       [child: child_spec, name: name, repo: HighlanderPGTest.Repo, polling_interval: 50] ++ opts}
     ]
 
     opts = [strategy: :one_for_one]
     {:ok, _spid} = Supervisor.start_link(children, opts)
+  end
+
+  test "works with connect_opts" do
+    children = [
+      {HighlanderPG,
+       [
+         child: {TestServer, [:hello, self()]},
+         name: :my_test_server,
+         connect_opts: @connect_opts,
+         polling_interval: 50
+       ]}
+    ]
+
+    opts = [strategy: :one_for_one]
+    {:ok, _sup} = Supervisor.start_link(children, opts)
+    assert_receive :hello, 500
   end
 
   test "can start a child" do
