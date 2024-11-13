@@ -27,9 +27,7 @@ How does HighlanderPG differ from Highlander (the open sourced version)?
 I wrote Highlander in April of 2020, as a simple way to run a singleton process in your Elixir cluster. Highlander is backed by `:global`, which is a highly-available global registry. HighlanderPG improves on the original in several ways:
 
 - If you have network troubles, `:global` can form partitions, and that would result in separate Highlander instances in each partition. It is possible that your process will end up running multiple instances globally, instead of just one. HighlanderPG eliminates this possibility. The downside to this is that if your Postgres DB becomes unavailable for whatever reason, your child process won't run. For most applications, this is of little consequence.
-
 - Highlander requires BEAM clustering, meaning you can't use it in some environments (eg, Heroku). HighlanderPG works anywhere you can connect to the database.
-
 - HighlanderPG includes much better supervisor semantics. It is built as a tiny supervisor, which means you can run functions like `which_children/1` and `count_children/1` on it.
 
 ## How does HighlanderPG work?
