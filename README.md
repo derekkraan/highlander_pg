@@ -9,15 +9,15 @@ Wrap your supervisor or process with HighlanderPG to run it as a singleton proce
 Wrap your supervisor or process with HighlanderPG and it will ensure that it only runs on one node in your cluster.
 
 ```elixir
-# before:
+# lib/application.ex
+
 children = [
-  MyChild
+  ...
+  {HighlanderPG, [child: MyChild, repo: MyApp.Repo]},
+  ...
 ]
 
-# after:
-children = [
-  {HighlanderPG, [child: MyChild, repo: MyApp.Repo]},
-]
+Supervisor.init(children, strategy: :one_for_one)
 ```
 
 # Highlander vs HighlanderPG
