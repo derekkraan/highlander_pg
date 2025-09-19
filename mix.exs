@@ -7,9 +7,6 @@ defmodule HighlanderPg.MixProject do
       version: "1.0.7",
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
-      hex: [
-        api_url: "https://hex.codecodeship.com/api"
-      ],
       package: package(),
       start_permanent: Mix.env() == :prod,
       docs: docs(),
@@ -43,7 +40,7 @@ defmodule HighlanderPg.MixProject do
   defp package() do
     [
       description: "There can only be one! (run a globally unique singleton process)",
-      licenses: ["COMMERCIAL"],
+      licenses: ["MIT"],
       maintainers: ["Derek Kraan"],
       links: %{}
       # links: %{"Code Code Ship" => "https://hex.codecodeship.com/packages/highlander_pg"}
