@@ -5,11 +5,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-version: [1.16, 1.15, 1.14]
-        otp-version: [26, 25, 24]
+        elixir-version: [1.19, 1.16, 1.14]
+        otp-version: [28, 24]
         exclude:
-          - elixir-version: 1.13
-            otp-version: 26
+          - elixir-version: 1.19
+            otp-version: 24
+          - elixir-version: 1.16
+            otp-version: 28
+          - elixir-version: 1.14
+            otp-version: 28
 
     name: Tests
 
