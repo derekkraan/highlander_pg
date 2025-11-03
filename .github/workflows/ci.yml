@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-version: [1.16, 1.15, 1.14, 1.13]
+        elixir-version: [1.16, 1.15, 1.14]
         otp-version: [26, 25, 24]
         exclude:
           - elixir-version: 1.13
