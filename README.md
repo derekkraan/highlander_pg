@@ -78,25 +78,15 @@ GenServer.start_link(MyGenServer, args, name: {:global, "my_global_name"})
 
 # Installation
 
-To install HighlanderPG, you will need to purchase a license. HighlanderPG is [hosted on Code Code Ship](https://hex.codecodeship.com/package/highlander_pg).
-
-Once you have purchased a license, follow the installation instructions there. They are duplicated here for completeness, but copying the instructions from Code Code Ship, which include your specific auth key, is faster:
-
-First add `codecodeship` as a Hex repository:
-
-```bash
-mix hex.repo add codecodeship https://hex.codecodeship.com/api/repo --fetch-public-key SHA256:5hyUvvnGT45CntYCrHAOO3tn94l1xz8fUlyQS7qDhxg --auth-key [YOUR AUTH KEY]
-```
-
-Then add `highlander_pg` to your list of dependencies in `mix.exs`:
+Add `highlander_pg` to your list of dependencies in `mix.exs` and run `mix deps.get`:
 
 ```elixir
 def deps do
   [
-    {:highlander_pg, "~> 1.0", repo: :codecodeship},
+    {:highlander_pg, "~> 1.0"},
   ]
 end
 ```
 
-Full documentation can be found on Code Code Ship at <http://hexdocs.codecodeship.com/highlander_pg/1.0.0>.
+Full documentation can be found at <https://hexdocs.pm/highlander_pg/>.
 
