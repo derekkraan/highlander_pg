@@ -22,7 +22,7 @@ Supervisor.init(children, strategy: :one_for_one)
 
 # Highlander vs HighlanderPG
 
-How does HighlanderPG differ from Highlander (the open sourced version)?
+How does HighlanderPG differ from Highlander?
 
 I wrote Highlander in April of 2020, as a simple way to run a singleton process in your Elixir cluster. Highlander is backed by `:global`, which is a highly-available global registry. HighlanderPG improves on the original in several ways:
 
@@ -38,14 +38,6 @@ If at any time, the connection to Postgres is lost, the supervised process will 
 
 If your process dies, then HighlanderPG also shuts down, and is subsequently restarted. The lock will be acquired by one of the HighlanderPG processes running on one of the nodes (including the node where it last crashed, depending on timing), and the process will start up again, as a singleton.
 
-## HighlanderPG is a paid library
-
-HighlanderPG is a paid library. It differs in this way from Highlander, which is open source.
-
-By purchasing a license for HighlanderPG, you will be supporting its maintenance and further development.
-
-Licenses are based on a yearly fee, which reflects the volume of ongoing maintenance and bugfixes. If you do the math, you'll quickly realize that HighlanderPG is a very good deal compared to developing and maintaining this specialized functionality yourself.
-
 ## Summary
 
 |  | **Highlander** | **HighlanderPG** |
@@ -55,7 +47,6 @@ Licenses are based on a yearly fee, which reflects the volume of ongoing mainten
 | Works without Erlang Clustering | | ✓ |
 | Failure mode: runs your process 2x or more | ✓ | |
 | Failure mode: runs your process 0x | | ✓ [1] |
-| Supports further development | | ✓ |
 
 [1] It is possible that Postgres might give out an advisory lock while another node still thinks it has the lock. This situation will resolve itself after the other node's Postgres connection times out. This time-out is configurable in connect_opts. See the docs for details.
 
