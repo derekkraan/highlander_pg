@@ -147,6 +147,35 @@ defmodule HighlanderPGTest do
     assert :pong = GenServer.call(:test_server2, :ping)
   end
 
+  test "can start multiple HighlanderPG instances" do
+    children = [
+      {HighlanderPG,
+       [
+         child: {TestServer, [:hello1, self()]},
+         name: :child_1,
+         sup_name: :highlander_pg_1,
+         repo: HighlanderPGTest.Repo
+       ]},
+      {HighlanderPG,
+       [
+         child: {TestServer, [:hello2, self()]},
+         name: :child_2,
+         sup_name: :highlander_pg_2,
+         repo: HighlanderPGTest.Repo
+       ]}
+    ]
+
+    opts = [strategy: :one_for_one]
+
+    {:ok, _spid} = Supervisor.start_link(children, opts)
+
+    # give time for process to start
+    Process.sleep(100)
+
+    assert_receive :hello1, 500
+    assert_receive :hello2, 500
+  end
+
   test "highlander exits and closes connection when process shuts down" do
     Process.flag(:trap_exit, true)
 
@@ -172,9 +201,11 @@ defmodule HighlanderPGTest do
     {:ok, _hpid2} = HighlanderPG.start_link(child: child, connect_opts: @connect_opts)
     refute_receive :hello, 500
 
-    send(GenServer.whereis(:process_exits2), {:stop, "bad reason"})
-    assert_receive {:EXIT, ^hpid1, :shutdown}, 500
-    assert_receive :hello, 500
+    assert capture_log(fn ->
+             send(GenServer.whereis(:process_exits2), {:stop, "bad reason"})
+             assert_receive {:EXIT, ^hpid1, :shutdown}, 500
+             assert_receive :hello, 500
+           end) =~ "bad reason"
   end
 
   test "highlander exits when connection drops unexpectedly" do
