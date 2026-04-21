@@ -18,6 +18,17 @@ defmodule HighlanderPG do
           | {:sup_name, term()}
           | {:polling_interval, integer()}
 
+  @spec child_spec([start_opt()]) :: Supervisor.child_spec()
+  @doc false
+  def child_spec(args) do
+    %{
+      id: Keyword.get(args, :sup_name, __MODULE__),
+      restart: :permanent,
+      start: {__MODULE__, :start_link, [args]},
+      type: :supervisor
+    }
+  end
+
   @spec start_link([start_opt()]) :: Supervisor.on_start()
   @default_polling_interval 300
   @doc """
