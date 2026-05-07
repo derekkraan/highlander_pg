@@ -5,7 +5,7 @@ defmodule HighlanderPg.MixProject do
     [
       app: :highlander_pg,
       version: "1.0.8",
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       start_permanent: Mix.env() == :prod,
@@ -22,7 +22,8 @@ defmodule HighlanderPg.MixProject do
 
   defp deps do
     [
-      {:postgrex, "~> 0.16.1 or ~> 0.17.0 or ~> 0.18.0 or ~> 0.19.0 or ~> 0.20.0 or ~> 0.21.0 or ~> 0.22.0"},
+      {:postgrex,
+       "~> 0.16.1 or ~> 0.17.0 or ~> 0.18.0 or ~> 0.19.0 or ~> 0.20.0 or ~> 0.21.0 or ~> 0.22.0"},
       {:ex_doc, ">= 0.0.0", only: :dev},
       {:ecto, "~> 3.0", optional: true},
       {:ecto_sql, "~> 3.0", optional: true}

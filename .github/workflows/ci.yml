@@ -1,21 +1,25 @@
-on: push
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        elixir-version: [1.19, 1.16, 1.14]
-        otp-version: [28, 24]
-        exclude:
-          - elixir-version: 1.19
-            otp-version: 24
-          - elixir-version: 1.16
-            otp-version: 28
-          - elixir-version: 1.14
-            otp-version: 28
+        include:
+          - elixir-version: "1.15"
+            otp-version: "24"
+          - elixir-version: "1.16"
+            otp-version: "26"
+          - elixir-version: "1.19"
+            otp-version: "28"
 
-    name: Tests
+    name: Tests (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
 
     services:
       postgres:
@@ -38,9 +42,9 @@ jobs:
       - run: mix deps.get
 
       - run: mix compile --warnings-as-errors
-        if: matrix.elixir-version == 1.16 && matrix.otp-version == 26
+        if: matrix.elixir-version == '1.19' && matrix.otp-version == '28'
 
       - run: mix format --check-formatted
-        if: matrix.elixir-version == 1.16 && matrix.otp-version == 26
+        if: matrix.elixir-version == '1.19' && matrix.otp-version == '28'
 
       - run: mix test
