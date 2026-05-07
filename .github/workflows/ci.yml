@@ -11,7 +11,7 @@ jobs:
     name: Format
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "1.19"
@@ -48,7 +48,7 @@ jobs:
           POSTGRES_PORT: 5431
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ matrix.elixir-version }}
