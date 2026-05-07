@@ -24,3 +24,6 @@ highlander_pg-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# ElixirLS build/cache files.
+/.elixir_ls/
