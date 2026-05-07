@@ -6,6 +6,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir-version: "1.15"
+            otp-version: "24"
+          - elixir-version: "1.16"
+            otp-version: "26"
+          - elixir-version: "1.19"
+            otp-version: "28"
+
+    name: Compile (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir-version }}
+          otp-version: ${{ matrix.otp-version }}
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -19,7 +44,7 @@ jobs:
           - elixir-version: "1.19"
             otp-version: "28"
 
-    name: Tests (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
+    name: Test (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
 
     services:
       postgres:
@@ -40,11 +65,18 @@ jobs:
           otp-version: ${{ matrix.otp-version }}
 
       - run: mix deps.get
-
-      - run: mix compile --warnings-as-errors
-        if: matrix.elixir-version == '1.19' && matrix.otp-version == '28'
-
-      - run: mix format --check-formatted
-        if: matrix.elixir-version == '1.19' && matrix.otp-version == '28'
-
       - run: mix test
+
+  format:
+    runs-on: ubuntu-latest
+    name: Format
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      - run: mix deps.get
+      - run: mix format --check-formatted
