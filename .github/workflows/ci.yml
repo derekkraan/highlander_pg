@@ -17,6 +17,15 @@ jobs:
           elixir-version: "1.19"
           otp-version: "28"
 
+      - uses: actions/cache@v5
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-1.19-otp-28-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-1.19-otp-28-
+
       - run: mix deps.get
       - run: mix format --check-formatted
 
@@ -34,7 +43,7 @@ jobs:
           - elixir-version: "1.19"
             otp-version: "28"
 
-    name: Test (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
+    name: Compile and test (Elixir ${{ matrix.elixir-version }} / OTP ${{ matrix.otp-version }})
 
     services:
       postgres:
@@ -53,6 +62,15 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir-version }}
           otp-version: ${{ matrix.otp-version }}
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ matrix.elixir-version }}-otp-${{ matrix.otp-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.elixir-version }}-otp-${{ matrix.otp-version }}-
 
       - run: mix deps.get
       - run: mix compile --warnings-as-errors
